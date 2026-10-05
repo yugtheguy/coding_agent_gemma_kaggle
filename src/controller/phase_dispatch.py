@@ -48,9 +48,14 @@ def dispatch_phase(controller, state, run_id, task_id):
         state.transition_to(Phase.LOCALIZE, controller.logger, run_id)
         
     elif phase == Phase.LOCALIZE:
-        # Mocking localization for E2E since we don't have all Stage 4-7 implementations hooked up yet perfectly.
-        # But we should call the provided backends if they exist.
         state.budget.tool_calls_used += 1
+        if hasattr(controller.backends, "localization_provider") and controller.backends.localization_provider:
+            loc_res = controller.backends.localization_provider.localize(state)
+            # Adapt from both strings (mock) and typed result
+            status = getattr(loc_res, "status", loc_res)
+            if status == "STALLED":
+                state.transition_to(Phase.ABANDONED, controller.logger, run_id)
+                return
         state.transition_to(Phase.DIAGNOSE, controller.logger, run_id)
         
     elif phase == Phase.DIAGNOSE:
