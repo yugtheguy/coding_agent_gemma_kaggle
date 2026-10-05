@@ -26,7 +26,29 @@ planned_budget:
   hard_semantic_calls: 2
   normal_patch_attempts: 1
   hard_patch_attempts: 2
+  normal_graph_calls: 3
+  hard_graph_calls: 5
   context_target_tokens: 18000
   context_hard_tokens: 24000
   soft_task_seconds: 240
   hard_task_seconds: 330
+
+query_expansion:
+  enabled: true
+  max_implementation_concepts: 5
+  max_test_terms: 3
+  max_alternative_symbols: 3
+  prompt_version: e00_qe_v1
+
+semantic:
+  enabled: true
+  k: 6
+  max_query_terms: 12
+
+graph:
+  enabled: true
+  max_seeds: 3
+  default_hops: 1
+  max_neighbors_per_relation: 8
+  total_neighbor_budget: 20
+  max_subgraph_nodes: 6
