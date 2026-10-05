@@ -1,5 +1,9 @@
 experiment_id: E00
 baseline_version: v1
+schema_version: 1
+prompt_version: e00_v1
+config_version: e00_v1
+telemetry_version: 1
 model_checkpoint: "gemma-4-31b-it-qat-w4a16-ct"
 sampling_settings:
   temperature: 1.0
