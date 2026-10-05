@@ -53,7 +53,8 @@ class E00Runner:
 
     def _generate_summary(self, results: List[TaskResult]):
         total = len(results)
-        completed = sum(1 for r in results if r.status == "completed")
+        completed_this_invocation = sum(1 for r in results if r.status == "completed" and r.cache_status != "hit")
+        skipped_completed = sum(1 for r in results if r.status == "completed" and r.cache_status == "hit")
         failed = sum(1 for r in results if r.status == "failed")
         skipped = sum(1 for r in results if r.status == "skipped")
         total_duration = sum(r.duration_seconds for r in results)
@@ -64,11 +65,12 @@ class E00Runner:
             "git_commit": self.ctx.git_commit,
             "config_hash": self.ctx.config_hash,
             "total_tasks": total,
-            "completed": completed,
+            "completed_this_invocation": completed_this_invocation,
+            "skipped_completed": skipped_completed,
             "failed": failed,
             "skipped": skipped,
             "total_duration": total_duration,
-            "average_task_duration": total_duration / max(1, completed + failed),
+            "average_task_duration": total_duration / max(1, completed_this_invocation + failed),
             "cache_hits": sum(1 for r in results if r.cache_status == "hit"),
             "cache_misses": sum(1 for r in results if r.cache_status == "miss"),
         }
