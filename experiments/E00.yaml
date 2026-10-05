@@ -112,6 +112,11 @@ submission:
 patch_extraction:
   timeout_seconds: 180
 
+harness:
+  strict_real_bindings: true
+  allow_mock_fallback: false
+  validation_mode: true
+
 artifact_cleanup:
   enabled: true
   remove_only_agent_created: true
