@@ -16,7 +16,7 @@ def test_run_syntax_check():
     
 def test_classify_target_failure():
     assert classify_target_failure(False, True, True, False) == "SYNTAX_FAILED"
-    assert classify_target_failure(False, False, False, True) == "ENVIRONMENT_ERROR"
+    assert classify_target_failure(False, False, False, True) == "INFRA/ENVIRONMENT"
     assert classify_target_failure(False, True, False, False) == "TARGET_TIMEOUT"
     assert classify_target_failure(True, False, False, False) == "TARGET_FAILED_SAME_REASON"
     assert classify_target_failure(False, False, False, False) == "TARGET_FAILED_NEW_REASON"

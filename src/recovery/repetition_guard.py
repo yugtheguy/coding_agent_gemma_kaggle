@@ -31,7 +31,12 @@ class RepetitionGuard:
                 return True
         return False
 
-    def is_blocked(self, sig: ActionSignature) -> bool:
+    def get_block_reason(self, sig: ActionSignature) -> str:
         if self.no_info_count >= self.max_consecutive_no_info:
-            return True
-        return self.is_action_repeated(sig)
+            return "NO_PROGRESS_DETECTED"
+        if self.is_action_repeated(sig):
+            return "REPEATED_ACTION_BLOCKED"
+        return ""
+
+    def is_blocked(self, sig: ActionSignature) -> bool:
+        return bool(self.get_block_reason(sig))

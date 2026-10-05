@@ -14,8 +14,9 @@ def determine_patch_repair(patch_attempts: int, has_new_evidence: bool, is_mater
     return RecoveryDecision("PATCH_REPAIR_ALLOWED", "justified", "PATCH", True, True, "MEDIUM", "repair logic", 0, False, "")
 
 def handle_search_recovery(guard: RepetitionGuard, sig: ActionSignature) -> RecoveryDecision:
-    if guard.is_blocked(sig):
-        return RecoveryDecision("CHANGE_SEARCH_CHANNEL", "repeated search", "LOCALIZE", False, True, "CHEAP", "semantic search", 0, False, "")
+    reason = guard.get_block_reason(sig)
+    if reason:
+        return RecoveryDecision(reason, reason.lower().replace('_', ' '), "LOCALIZE", False, True, "CHEAP", "semantic search", 0, False, "")
     return RecoveryDecision("RETRY_SEARCH", "allow retry", "LOCALIZE", False, True, "CHEAP", "search results", 0, False, "")
 
 def handle_graph_recovery(noisy: bool) -> RecoveryDecision:

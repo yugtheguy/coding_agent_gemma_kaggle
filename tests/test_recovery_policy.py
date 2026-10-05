@@ -12,7 +12,15 @@ def test_handle_search_recovery():
     sig = ActionSignature("SEARCH", "target", "query", "phase", "hash")
     guard.record_action(sig, progress_made=False)
     guard.record_action(sig, progress_made=False)
-    assert handle_search_recovery(guard, sig).action == "CHANGE_SEARCH_CHANNEL" # Wait, 2 actions recorded + the one being evaluated makes 3? Oh wait, is_blocked checks if it's already in history. So since it's in history, is_action_repeated will return True and block it.
+    guard.record_action(sig, progress_made=False)
+    guard.record_action(sig, progress_made=False)
+    assert handle_search_recovery(guard, sig).action == "NO_PROGRESS_DETECTED"
+    
+    # Test REPEATED_ACTION_BLOCKED
+    guard_repeat = RepetitionGuard(max_consecutive_no_info=3)
+    sig_repeat = ActionSignature("SEARCH", "target", "query", "phase", "hash")
+    guard_repeat.record_action(sig_repeat, progress_made=True) # Reset no_info
+    assert handle_search_recovery(guard_repeat, sig_repeat).action == "REPEATED_ACTION_BLOCKED"
     
     guard2 = RepetitionGuard(max_consecutive_no_info=3)
     sig2 = ActionSignature("SEARCH", "target2", "query2", "phase", "hash")

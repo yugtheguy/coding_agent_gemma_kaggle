@@ -36,7 +36,7 @@ def classify_target_failure(
     if syntax_error:
         return "SYNTAX_FAILED"
     if environment_error:
-        return "ENVIRONMENT_ERROR"
+        return "INFRA/ENVIRONMENT"
     if timeout:
         return "TARGET_TIMEOUT"
     if same_reason:
