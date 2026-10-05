@@ -21,7 +21,7 @@ TEST_CLUES_VOCAB = {
     "test", "regression", "fixture", "mock", "expected", "assert", "raises"
 }
 
-def extract_anchors(text: str) -> SearchAnchors:
+def extract_anchors(text: str, telemetry_logger=None, run_id: str = None, task_id: str = None) -> SearchAnchors:
     anchors = []
     
     def add(val: str, type_: AnchorType, start: int, end: int, conf: Confidence, prov: str):
@@ -125,4 +125,18 @@ def extract_anchors(text: str) -> SearchAnchors:
             continue
         final_anchors.append(a)
         
-    return SearchAnchors(final_anchors)
+    result = SearchAnchors(final_anchors)
+    
+    if telemetry_logger and run_id and task_id:
+        top_anchors = [a.normalized_value for a in final_anchors[:3]]
+        payload = {
+            "identifier_count": type_counts.get(AnchorType.IDENTIFIER, 0),
+            "path_count": type_counts.get(AnchorType.FILE_PATH, 0),
+            "literal_count": type_counts.get(AnchorType.STRING_LITERAL, 0),
+            "operation_count": type_counts.get(AnchorType.OPERATION, 0),
+            "domain_term_count": type_counts.get(AnchorType.DOMAIN_TERM, 0),
+            "top_anchors": top_anchors
+        }
+        telemetry_logger.log_event(run_id, "ANCHORS_EXTRACTED", payload, task_id)
+        
+    return result
