@@ -87,3 +87,14 @@ recovery:
   require_new_evidence_for_reflection: true
   require_new_evidence_for_second_patch: true
   block_repeated_identical_actions: true
+
+termination:
+  stop_on_hard_budget: true
+  submit_if_verified_at_hard_budget: true
+  block_actions_after_solved: true
+  soft_limit_requires_high_value_action: true
+
+runtime:
+  track_agent_active_seconds: true
+  track_end_to_end_task_seconds: true
+  track_global_budget_context: true

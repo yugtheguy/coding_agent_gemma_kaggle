@@ -1,0 +1,11 @@
+from enum import Enum
+
+class TaskStatus(Enum):
+    SOLVED = "SOLVED"
+    STILL_INFORMATION_GAINING = "STILL_INFORMATION_GAINING"
+    STALLED = "STALLED"
+
+class Action(Enum):
+    CONTINUE = "CONTINUE"
+    SUBMIT_CANDIDATE = "SUBMIT_CANDIDATE"
+    ABANDON = "ABANDON"
