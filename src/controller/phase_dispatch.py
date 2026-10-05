@@ -58,9 +58,11 @@ def dispatch_phase(controller, state, run_id, task_id):
             # call diagnosis
             diag_res = controller.backends.diagnosis_provider.diagnose(state)
             state.budget.model_turns_used += 1
-            if diag_res == "READY":
+            # Support both string literals from test mocks and typed DiagnosisResult from production backend
+            readiness = getattr(diag_res, "patch_readiness", diag_res)
+            if readiness == "READY":
                 state.transition_to(Phase.PATCH, controller.logger, run_id)
-            elif diag_res == "NEEDS_EVIDENCE":
+            elif readiness == "NEEDS_EVIDENCE":
                 state.transition_to(Phase.REPRODUCE, controller.logger, run_id)
             else:
                 state.transition_to(Phase.ABANDONED, controller.logger, run_id)
@@ -83,7 +85,9 @@ def dispatch_phase(controller, state, run_id, task_id):
         state.budget.tool_calls_used += 1
         if hasattr(controller.backends, "command_backend") and controller.backends.command_backend:
              res = controller.backends.command_backend.run_target()
-             if res == "PASS":
+             # Support both string literals from test mocks and typed VerificationResult from production backend
+             status = getattr(res, "status", res)
+             if status == "PASS":
                  state.patch.target_test_status = "PASS"
                  state.transition_to(Phase.VERIFY_REGRESSION, controller.logger, run_id)
              else:
@@ -105,7 +109,7 @@ def dispatch_phase(controller, state, run_id, task_id):
             evidence = {"target_verified": state.patch.target_test_status == "PASS", "regression_verified": state.patch.regression_test_status == "PASS"}
             fc_res = sub_ctrl.final_check(TaskStatus.SOLVED, TermAction.SUBMIT_CANDIDATE, evidence, "")
             
-            controller._log("FINAL_CHECK_COMPLETED", {"status": fc_res.status}, run_id, task_id)
+            controller._log("FINAL_CHECK_COMPLETED", {"status": fc_res.status, "reason": fc_res.reason}, run_id, task_id)
             if fc_res.status == "PASS":
                 # Save check result to controller or state for submission
                 controller.last_check_result = fc_res
