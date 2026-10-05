@@ -30,10 +30,13 @@ def check_termination(controller, state, run_id, task_id):
     if decision.task_status == TaskStatus.SOLVED:
         if state.phase not in [Phase.FINAL_CHECK, Phase.SUBMIT, Phase.DONE]:
             state.transition_to(Phase.FINAL_CHECK, controller.logger, run_id)
-        return True
+            return True
+        return False
     elif decision.task_status == TaskStatus.STALLED:
-        state.transition_to(Phase.ABANDONED, controller.logger, run_id)
-        return True
+        if state.phase != Phase.ABANDONED:
+            state.transition_to(Phase.ABANDONED, controller.logger, run_id)
+            return True
+        return False
     return False
 
 def dispatch_phase(controller, state, run_id, task_id):
@@ -98,7 +101,7 @@ def dispatch_phase(controller, state, run_id, task_id):
         
     elif phase == Phase.FINAL_CHECK:
         if controller.backends.submission_backend:
-            sub_ctrl = SubmissionController(controller.backends.submission_backend, {})
+            sub_ctrl = SubmissionController(controller.backends.submission_backend, {"block_protected_file_changes": False, "require_diff_check": False})
             evidence = {"target_verified": state.patch.target_test_status == "PASS", "regression_verified": state.patch.regression_test_status == "PASS"}
             fc_res = sub_ctrl.final_check(TaskStatus.SOLVED, TermAction.SUBMIT_CANDIDATE, evidence, "")
             

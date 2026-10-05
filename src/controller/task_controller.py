@@ -52,7 +52,8 @@ class TaskController:
                 dispatch_phase(self, state, run_id, task.task_id)
             except Exception as e:
                 self._log("CONTROLLER_ERROR", {"error": str(e), "traceback": traceback.format_exc()}, run_id, task.task_id)
-                raise e
+                state.transition_to(Phase.ABANDONED, self.logger, run_id)
+                break
                 
             self._log("PHASE_COMPLETED", {"phase": state.phase.name}, run_id, task.task_id)
             
