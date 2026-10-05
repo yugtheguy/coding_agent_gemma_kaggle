@@ -104,6 +104,7 @@ def test_justified_repair():
         submission_backend=FakeSubmissionBackend()
     )
     ctrl = TaskController(backends, ControllerConfig(), GlobalBudgetContext(1, 3600, 3600))
+    ctrl.budget_config.hard_patch_attempts = 5
     res = ctrl.run(TaskInput("test5", "issue", "repo"), "run5")
     # The test passes because the second patch passes TARGET verification!
     # But wait, regression verification also passes by default!
