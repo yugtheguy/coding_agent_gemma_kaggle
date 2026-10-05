@@ -1,0 +1,28 @@
+experiment_id: E00
+baseline_version: v1
+model_checkpoint: "gemma-4-31b-it-qat-w4a16-ct"
+sampling_settings:
+  temperature: 1.0
+  top_p: 0.95
+  top_k: 64
+  thinking: true
+  max_output_tokens: 6144
+architecture_flags:
+  subagents: false
+  lora: false
+  rl: false
+  gnn: false
+  best_of_n: 1
+planned_budget:
+  soft_model_turns: 14
+  hard_model_turns: 18
+  soft_tool_calls: 22
+  hard_tool_calls: 30
+  normal_semantic_calls: 1
+  hard_semantic_calls: 2
+  normal_patch_attempts: 1
+  hard_patch_attempts: 2
+  context_target_tokens: 18000
+  context_hard_tokens: 24000
+  soft_task_seconds: 240
+  hard_task_seconds: 330
