@@ -98,3 +98,20 @@ runtime:
   track_agent_active_seconds: true
   track_end_to_end_task_seconds: true
   track_global_budget_context: true
+
+submission:
+  require_nonempty_patch: true
+  require_diff_check: true
+  require_syntax_pass: true
+  require_target_verification: true
+  require_regression_verification: true
+  block_protected_file_changes: true
+  block_unexpected_test_changes: true
+  prevent_duplicate_submission: true
+
+patch_extraction:
+  timeout_seconds: 180
+
+artifact_cleanup:
+  enabled: true
+  remove_only_agent_created: true
