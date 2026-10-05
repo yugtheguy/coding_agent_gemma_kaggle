@@ -42,7 +42,7 @@ class MockCommand:
 class MockPatch:
     def generate_patch(self, state):
         import time
-        with open("mock_patch_file.py", "a") as f:
+        with open("src/mock_patch_target.py", "a") as f:
             f.write(f"# dummy {time.time()}\n")
 
 def test_clean_success():
