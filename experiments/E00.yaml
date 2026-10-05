@@ -65,3 +65,15 @@ diagnosis:
 source_acquisition:
   merge_overlapping_windows: true
   default_context_lines: 20
+
+patching:
+  normal_attempts: 1
+  hard_attempts: 2
+  max_expected_files: 2
+  suspicious_file_count: 4
+  suspicious_changed_lines: 120
+
+verification:
+  target_timeout_seconds: 90
+  syntax_check_python: true
+  run_target_before_regression: true
