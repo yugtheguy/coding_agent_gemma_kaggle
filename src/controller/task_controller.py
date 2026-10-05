@@ -23,6 +23,14 @@ class TaskController:
         self.budget_config = BudgetConfig()
         self.budget_controller = BudgetController(self.budget_config)
         self.term_ctrl = TerminationController(self.budget_controller)
+        
+        if self.config.mode == "harness" and self.config.fail_on_missing_harness_binding:
+            for b_name in ["semantic_backend", "graph_backend", "localization_provider", "diagnosis_provider", "patch_provider", "submission_backend"]:
+                backend = getattr(self.backends, b_name, None)
+                if backend is not None:
+                    cls_name = backend.__class__.__name__
+                    if "Fake" in cls_name or "Mock" in cls_name:
+                        raise Exception(f"INFRA_HARNESS_BINDING_ERROR: {b_name} is mock")
         self.last_decision = None
         
     def _log(self, event_type: str, payload: dict, run_id: str, task_id: str):
@@ -42,6 +50,7 @@ class TaskController:
         while state.phase not in [Phase.DONE, Phase.ABANDONED]:
             if self.step_count >= self.config.max_steps:
                 self._log("CONTROLLER_ERROR", {"reason": "CONTROLLER_STEP_LIMIT"}, run_id, task.task_id)
+                self.infra_failure = "CONTROLLER_STEP_LIMIT"
                 state.transition_to(Phase.ABANDONED, self.logger, run_id)
                 break
                 
@@ -52,6 +61,7 @@ class TaskController:
                 dispatch_phase(self, state, run_id, task.task_id)
             except Exception as e:
                 self._log("CONTROLLER_ERROR", {"error": str(e), "traceback": traceback.format_exc()}, run_id, task.task_id)
+                self.infra_failure = str(e)
                 state.transition_to(Phase.ABANDONED, self.logger, run_id)
                 break
                 
@@ -60,7 +70,11 @@ class TaskController:
         task_status = "SOLVED" if state.phase == Phase.DONE else "STALLED"
         submission_status = "SUBMITTED" if state.phase == Phase.DONE else "NONE"
         term_reason = "SUCCESS" if state.phase == Phase.DONE else "ABANDONED"
-        if self.last_decision and self.last_decision.reason:
+        if getattr(self, "infra_failure", None) == "CONTROLLER_STEP_LIMIT":
+            term_reason = "CONTROLLER_STEP_LIMIT"
+        elif getattr(self, "infra_failure", None) is not None:
+            term_reason = "INFRA_FAILURE"
+        elif self.last_decision and self.last_decision.reason:
             term_reason = self.last_decision.reason
             
         patch_hash = state.patch.last_patch_summary if state.patch.last_patch_summary else ""
@@ -73,7 +87,7 @@ class TaskController:
             termination_reason=term_reason,
             patch_hash=patch_hash,
             resolved_locally=state.phase == Phase.DONE,
-            infra_failure=None,
+            infra_failure=getattr(self, "infra_failure", None),
             elapsed_seconds=time.time() - self.start_time,
             model_turns=state.budget.model_turns_used,
             tool_calls=state.budget.tool_calls_used,

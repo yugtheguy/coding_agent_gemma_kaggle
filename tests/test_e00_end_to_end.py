@@ -5,6 +5,18 @@ from src.control.runtime_accounting import GlobalBudgetContext
 from src.agent.state import Phase
 import pytest
 import subprocess
+import os
+
+@pytest.fixture(autouse=True)
+def setup_git_repo(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init"], check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], check=True, capture_output=True)
+    with open("mock_target.py", "w") as f:
+        f.write("# initial\n")
+    subprocess.run(["git", "add", "mock_target.py"], check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], check=True, capture_output=True)
 
 class MockLocalization:
     def __init__(self, seq):
@@ -42,7 +54,7 @@ class MockCommand:
 class MockPatch:
     def generate_patch(self, state):
         import time
-        with open("src/mock_patch_target.py", "a") as f:
+        with open("mock_target.py", "a") as f:
             f.write(f"# dummy {time.time()}\n")
 
 def test_clean_success():
@@ -115,15 +127,18 @@ def test_justified_repair():
 def test_regression_failure():
     class MockRegression:
         def run_target(self): return "PASS"
+        def run_regression(self): return "FAIL"
     backends = ControllerBackends(
-        diagnosis_provider=MockDiagnosis(["READY", "ABANDONED"]),
+        diagnosis_provider=MockDiagnosis(["READY", "READY"]),
         patch_provider=MockPatch(),
         command_backend=MockRegression(),
         submission_backend=FakeSubmissionBackend()
     )
     ctrl = TaskController(backends, ControllerConfig(), GlobalBudgetContext(1, 3600, 3600))
+    ctrl.budget_config.hard_patch_attempts = 1
     res = ctrl.run(TaskInput("test6", "issue", "repo"), "run6")
-    # For now regression always passes in phase_dispatch mock unless we modify phase_dispatch
+    assert res.final_phase == "ABANDONED"
+    assert res.task_status == "STALLED"
 
 def test_hard_budget_unsolved():
     backends = ControllerBackends(

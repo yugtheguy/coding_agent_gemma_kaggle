@@ -103,7 +103,18 @@ def dispatch_phase(controller, state, run_id, task_id):
             
     elif phase == Phase.VERIFY_REGRESSION:
         state.budget.tool_calls_used += 1
-        state.patch.regression_test_status = "PASS"
+        if hasattr(controller.backends, "command_backend") and controller.backends.command_backend and hasattr(controller.backends.command_backend, "run_regression"):
+             res = controller.backends.command_backend.run_regression()
+             status = getattr(res, "status", res)
+             if status == "PASS":
+                 state.patch.regression_test_status = "PASS"
+             else:
+                 state.patch.regression_test_status = "FAIL"
+                 state.transition_to(Phase.DIAGNOSE, controller.logger, run_id)
+                 return
+        else:
+             state.patch.regression_test_status = "PASS"
+             
         if check_termination(controller, state, run_id, task_id):
             return
         state.transition_to(Phase.FINAL_CHECK, controller.logger, run_id)
