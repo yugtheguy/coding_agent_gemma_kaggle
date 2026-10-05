@@ -77,3 +77,13 @@ verification:
   target_timeout_seconds: 90
   syntax_check_python: true
   run_target_before_regression: true
+  max_nearby_regression_targets: 3
+  nearby_regression_timeout_seconds: 90
+  broader_regression_enabled: true
+  full_suite_default: false
+
+recovery:
+  max_consecutive_no_info_actions: 3
+  require_new_evidence_for_reflection: true
+  require_new_evidence_for_second_patch: true
+  block_repeated_identical_actions: true
