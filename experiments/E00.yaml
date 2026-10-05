@@ -115,3 +115,13 @@ patch_extraction:
 artifact_cleanup:
   enabled: true
   remove_only_agent_created: true
+
+controller:
+  max_steps: 50
+  mode: explicit
+  fail_on_missing_harness_binding: true
+  prevent_hidden_retries: true
+
+context:
+  target_active_tokens: 18000
+  hard_active_tokens: 24000
