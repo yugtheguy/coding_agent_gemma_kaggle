@@ -33,7 +33,7 @@ def test_graph_hub_control():
         }
     }
     backend = FakeGraphBackend(mapping)
-    decision = GraphDecision(True, ["seed_func"], [], "", 8, 20)
+    decision = GraphDecision(True, ["seed_func"], [], "", 30, 20)
     
     result = run_graph_expansion(backend, decision)
     
@@ -64,3 +64,27 @@ def test_graph_multiple_seeds():
     assert dep.neighbor.target == "common_callee"
     assert "seed1" in dep.supporting_seeds
     assert "seed2" in dep.supporting_seeds
+
+def test_graph_subgraph_bounded():
+    mapping = {
+        "seed1": {
+            "CALLS": ["callee1", "callee2", "callee3"]
+        }
+    }
+    
+    class FakeGraphBackendWithSubgraph(FakeGraphBackend):
+        def get_subgraph(self, nodes):
+            from src.localization.graph_backend import GraphSubgraph
+            self.call_count += 1
+            assert len(nodes) <= 6
+            return GraphSubgraph(nodes, [])
+            
+    backend = FakeGraphBackendWithSubgraph(mapping)
+    decision = GraphDecision(True, ["seed1"], [], "", 8, 20)
+    
+    result = run_graph_expansion(backend, decision)
+    
+    # 1 call for get_neighbors, 1 call for get_subgraph
+    assert result.stats["graph_calls"] == 2
+    assert result.stats["neighbors_returned"] == 3
+

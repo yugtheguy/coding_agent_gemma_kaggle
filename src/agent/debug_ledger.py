@@ -16,6 +16,8 @@ class Hypothesis:
     status: str
     supporting_evidence_ids: List[str] = field(default_factory=list)
     disconfirming_evidence_ids: List[str] = field(default_factory=list)
+    location: str = ""
+    confidence: str = ""
     created_step: int = 0
     updated_step: int = 0
 

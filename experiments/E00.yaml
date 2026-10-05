@@ -52,3 +52,16 @@ graph:
   max_neighbors_per_relation: 8
   total_neighbor_budget: 20
   max_subgraph_nodes: 6
+
+diagnosis:
+  enabled: true
+  prompt_version: e00_diag_v1
+  max_focused_files: 5
+  max_snippets: 6
+  max_lines_per_snippet: 120
+  max_total_source_lines: 500
+  max_rejected_hypotheses: 10
+
+source_acquisition:
+  merge_overlapping_windows: true
+  default_context_lines: 20

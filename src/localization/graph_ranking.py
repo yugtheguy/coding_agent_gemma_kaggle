@@ -37,7 +37,7 @@ def run_graph_expansion(
     
     for seed in decision.seeds:
         try:
-            neighbors = backend.get_neighbors(seed, max_neighbors=50) 
+            neighbors = backend.get_neighbors(seed, max_neighbors=decision.max_neighbors_per_seed) 
             stats["graph_calls"] += 1
             all_neighbors.extend(neighbors)
         except Exception:
@@ -79,6 +79,19 @@ def run_graph_expansion(
     for i, rd in enumerate(ranked):
         rd.rank = i + 1
         
+    # SUBGRAPH (Optional)
+    if len(ranked) >= 2:
+        top_nodes = [rd.neighbor.target for rd in ranked[:6]]
+        try:
+            subgraph = backend.get_subgraph(top_nodes)
+            stats["graph_calls"] += 1
+            # We integrate subgraph edges if any
+            for edge in subgraph.edges:
+                if edge.normalized_relation not in stats["relations_seen"]:
+                    stats["relations_seen"].append(edge.normalized_relation)
+        except Exception:
+            pass
+
     usefulness = "UNHELPFUL"
     if ranked:
         useful_rels = sum(1 for rd in ranked if rd.neighbor.normalized_relation in ("CALLER", "CALLEE", "INHERITANCE", "TEST_TARGET", "OVERRIDE"))
