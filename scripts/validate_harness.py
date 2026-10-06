@@ -1,116 +1,107 @@
 import os
 import sys
 import json
-import time
-import subprocess
-import traceback
+import yaml
 
-def probe_environment():
+def validate_environment():
     report = {
-        "status": "PARTIAL",
-        "timestamp": time.time(),
+        "status": "PASS",
         "environment": {},
-        "network": {},
-        "gpu": {},
-        "dependencies": {},
-        "ports": {},
-        "tools": {}
+        "paths": {},
+        "submission_e00": {}
     }
 
-    # 1. Environment variables
-    report["environment"]["env_vars"] = {k: v for k, v in os.environ.items() if "KAGGLE" in k or "ADK" in k or "CUDA" in k or "VLLM" in k}
-    report["environment"]["cwd"] = os.getcwd()
-    report["environment"]["python_version"] = sys.version
+    # 1. Environment variables (redacted)
+    sensitive_keys = ["TOKEN", "SECRET", "KEY", "PASSWORD", "CREDENTIAL"]
+    redacted_env = {}
+    for k, v in os.environ.items():
+        if any(sec in k.upper() for sec in sensitive_keys):
+            redacted_env[k] = {"present": True}
+        else:
+            redacted_env[k] = v
+    report["environment"]["env_vars"] = redacted_env
 
-    # 2. Filesystem
-    try:
-        with open("test_write.txt", "w") as f:
-            f.write("test")
-        report["environment"]["writable_cwd"] = True
-        os.remove("test_write.txt")
-    except Exception as e:
-        report["environment"]["writable_cwd"] = False
-        report["environment"]["write_error"] = str(e)
-        
-    try:
-        with open("/tmp/test_write.txt", "w") as f:
-            f.write("test")
-        report["environment"]["writable_tmp"] = True
-        os.remove("/tmp/test_write.txt")
-    except Exception as e:
-        report["environment"]["writable_tmp"] = False
+    # 2. Filesystem Paths
+    required_paths = [
+        "HARNESS_README",
+        "tasks.jsonl",
+        "snapshots",
+        "graphs",
+        "embeddings",
+        "wheels",
+        "sample_submission",
+    ]
+    
+    for path in required_paths:
+        exists = os.path.exists(path)
+        report["paths"][path] = exists
+        if not exists:
+            # We don't fail immediately because we might run this outside kaggle, 
+            # but we log it. The task mentions to validate these.
+            report["status"] = "PARTIAL"
 
-    # 3. Network
-    try:
-        import urllib.request
-        urllib.request.urlopen("https://github.com", timeout=3)
-        report["network"]["internet"] = True
-    except Exception as e:
-        report["network"]["internet"] = False
-        report["network"]["internet_error"] = str(e)
+    # 3. submission_e00 validation
+    sub_dir = "submission_e00"
+    if not os.path.exists(sub_dir):
+        report["status"] = "FAIL"
+        report["submission_e00"]["exists"] = False
+        return report
+    
+    report["submission_e00"]["exists"] = True
+    
+    sub_files = [
+        "agent.yaml",
+        "eval_config.yaml",
+        "configs/sampling.yaml",
+        "prompts/system.md"
+    ]
+    
+    for sf in sub_files:
+        path = os.path.join(sub_dir, sf)
+        exists = os.path.exists(path)
+        report["submission_e00"][sf] = exists
+        if not exists:
+            report["status"] = "FAIL"
 
-    # 4. GPU
-    try:
-        nvidia_smi = subprocess.check_output(["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"], text=True)
-        report["gpu"]["nvidia_smi"] = nvidia_smi.strip().split("\n")
-    except Exception as e:
-        report["gpu"]["nvidia_smi_error"] = str(e)
-        
-    try:
-        import torch
-        report["gpu"]["torch_available"] = True
-        report["gpu"]["device_count"] = torch.cuda.device_count()
-        if torch.cuda.device_count() > 0:
-            report["gpu"]["device_name"] = torch.cuda.get_device_name(0)
-    except ImportError:
-        report["gpu"]["torch_available"] = False
-    except Exception as e:
-        report["gpu"]["torch_error"] = str(e)
-
-    # 5. Dependencies
-    for pkg in ["google_adk", "kaggle_evaluation", "vllm", "transformers", "openai"]:
+    # Validate agent.yaml
+    agent_yaml_path = os.path.join(sub_dir, "agent.yaml")
+    if os.path.exists(agent_yaml_path):
         try:
-            mod = __import__(pkg)
-            report["dependencies"][pkg] = True
-            if hasattr(mod, "__version__"):
-                report["dependencies"][pkg + "_version"] = mod.__version__
-        except ImportError:
-            report["dependencies"][pkg] = False
+            with open(agent_yaml_path, "r") as f:
+                content = f.read()
+                # Simple string checks for includes
+                if "!include prompts/system.md" not in content:
+                    report["submission_e00"]["agent_yaml_has_system_include"] = False
+                    report["status"] = "FAIL"
+                if "!include configs/sampling.yaml" not in content:
+                    report["submission_e00"]["agent_yaml_has_sampling_include"] = False
+                    report["status"] = "FAIL"
+                
+                # Check for single agent, no subagents, correct model
+                if "subagents" in content:
+                    report["submission_e00"]["agent_yaml_no_subagents"] = False
+                if "adapters" in content:
+                    report["submission_e00"]["agent_yaml_no_adapters"] = False
+                    
+                # Validate exact tools
+                required_tools = [
+                    "run_command", "read_file", "edit_file", "write_file",
+                    "get_status", "submit_patch", "get_code_neighbors",
+                    "search_similar_code", "get_code_subgraph"
+                ]
+                for tool in required_tools:
+                    if tool not in content:
+                        report["submission_e00"][f"missing_tool_{tool}"] = True
+                        report["status"] = "FAIL"
 
-    # 6. Local Ports
-    try:
-        import socket
-        for port in [8000, 8080, 5000]:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            result = sock.connect_ex(('127.0.0.1', port))
-            report["ports"][f"port_{port}"] = "open" if result == 0 else "closed"
-            sock.close()
-    except Exception as e:
-        report["ports"]["error"] = str(e)
-
-    # 7. ADK / Tools Inspection
-    if report["dependencies"].get("google_adk", False):
-        try:
-            import google_adk
-            report["tools"]["google_adk_dir"] = dir(google_adk)
-            # Try to see if there is an active agent context or tools available
         except Exception as e:
-            report["tools"]["google_adk_error"] = str(e)
-            
-    if report["dependencies"].get("kaggle_evaluation", False):
-        try:
-            import kaggle_evaluation
-            report["tools"]["kaggle_evaluation_dir"] = dir(kaggle_evaluation)
-        except Exception as e:
-            report["tools"]["kaggle_evaluation_error"] = str(e)
+            report["submission_e00"]["agent_yaml_error"] = str(e)
+            report["status"] = "FAIL"
 
-    # Save report
-    os.makedirs("artifacts/stage14", exist_ok=True)
-    with open("artifacts/stage14/runtime_validation.json", "w") as f:
-        json.dump(report, f, indent=2)
-        
-    print("Stage 14 validation completed. Artifact saved to artifacts/stage14/runtime_validation.json")
     print(json.dumps(report, indent=2))
+    
+    if report["status"] == "FAIL":
+        sys.exit(1)
 
 if __name__ == "__main__":
-    probe_environment()
+    validate_environment()

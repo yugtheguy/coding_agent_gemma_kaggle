@@ -1,0 +1,6 @@
+# E00 Eval Config for Harness
+# Hard safety budgets mapped to harness controls:
+# hard_tool_calls: 30 -> max_steps: 30
+# hard_task_seconds: 330 -> timeout_seconds: 330
+max_steps: 30
+timeout_seconds: 330
